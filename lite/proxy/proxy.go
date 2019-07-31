@@ -106,8 +106,8 @@ func makeGenesisFunc(c rpcclient.Client) func(ctx *rpctypes.Context) (*ctypes.Re
 	}
 }
 
-func makeBlockFunc(c rpcclient.Client) func(ctx *rpctypes.Context, height *int64) (*ctypes.StrippedResultBlock, error) {
-	return func(ctx *rpctypes.Context, height *int64) (*ctypes.StrippedResultBlock, error) {
+func makeBlockFunc(c rpcclient.Client) func(ctx *rpctypes.Context, height *int64) (*ctypes.ResultBlock, error) {
+	return func(ctx *rpctypes.Context, height *int64) (*ctypes.ResultBlock, error) {
 		return c.Block(height)
 	}
 }

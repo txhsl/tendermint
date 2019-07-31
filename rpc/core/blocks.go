@@ -209,7 +209,7 @@ func filterMinMax(height, min, max, limit int64) (int64, int64, error) {
 // }
 // ```
 
-func Block(ctx *rpctypes.Context, heightPtr *int64) (*ctypes.StrippedResultBlock, error) {
+func Block(ctx *rpctypes.Context, heightPtr *int64) (*ctypes.ResultBlock, error) {
 	storeHeight := blockStore.Height()
 	height, err := getHeight(storeHeight, heightPtr)
 	if err != nil {
@@ -219,7 +219,7 @@ func Block(ctx *rpctypes.Context, heightPtr *int64) (*ctypes.StrippedResultBlock
 	blockMeta := blockStore.LoadBlockMeta(height)
 	blockId := &blockMeta.BlockID
 	block := blockStore.LoadBlock(height)
-	return &ctypes.StrippedResultBlock{BlockID: blockId, Block: block}, nil
+	return &ctypes.ResultBlock{BlockID: blockId, Block: block}, nil
 }
 
 // Get block commit at a given height.

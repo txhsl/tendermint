@@ -133,7 +133,7 @@ func (c *Local) Genesis() (*ctypes.ResultGenesis, error) {
 	return core.Genesis(c.ctx)
 }
 
-func (c *Local) Block(height *int64) (*ctypes.StrippedResultBlock, error) {
+func (c *Local) Block(height *int64) (*ctypes.ResultBlock, error) {
 	return core.Block(c.ctx, height)
 }
 

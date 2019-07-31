@@ -269,8 +269,8 @@ func (c *baseRPCClient) Genesis() (*ctypes.ResultGenesis, error) {
 	return result, nil
 }
 
-func (c *baseRPCClient) Block(height *int64) (*ctypes.StrippedResultBlock, error) {
-	result := new(ctypes.StrippedResultBlock)
+func (c *baseRPCClient) Block(height *int64) (*ctypes.ResultBlock, error) {
+	result := new(ctypes.ResultBlock)
 	_, err := c.caller.Call("block", map[string]interface{}{"height": height}, result)
 	if err != nil {
 		return nil, errors.Wrap(err, "Block")
