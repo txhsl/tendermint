@@ -137,7 +137,7 @@ func (c Client) Genesis() (*ctypes.ResultGenesis, error) {
 	return core.Genesis(&rpctypes.Context{})
 }
 
-func (c Client) Block(height *int64) (*ctypes.ResultBlock, error) {
+func (c Client) Block(height *int64) (*ctypes.StrippedResultBlock, error) {
 	return core.Block(&rpctypes.Context{}, height)
 }
 

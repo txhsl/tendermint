@@ -30,6 +30,11 @@ type ResultBlock struct {
 	Block     *types.Block     `json:"block"`
 }
 
+type StrippedResultBlock struct {
+	BlockID *types.BlockID `json:"block_id"`
+	Block   *types.Block   `json:"block"`
+}
+
 // Commit and Header
 type ResultCommit struct {
 	types.SignedHeader `json:"signed_header"`
