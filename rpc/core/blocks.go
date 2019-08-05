@@ -58,7 +58,8 @@ import (
 // 						"total": "1"
 // 					},
 // 					"hash": "96B1D2F2D201BA4BC383EB8224139DB1294944E5"
-// 				}
+// 				},
+// 				"block_size": "10000"
 // 			}
 // 		],
 // 		"last_height": "5493"
