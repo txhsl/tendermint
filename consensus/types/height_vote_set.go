@@ -13,6 +13,8 @@ import (
 type RoundVoteSet struct {
 	Prevotes   *types.VoteSet
 	Precommits *types.VoteSet
+	PrimaryChange *types.VoteSet
+	ChangeCommit *types.VoteSet
 }
 
 var (
@@ -100,9 +102,13 @@ func (hvs *HeightVoteSet) addRound(round int) {
 	// log.Debug("addRound(round)", "round", round)
 	prevotes := types.NewVoteSet(hvs.chainID, hvs.height, round, types.PrevoteType, hvs.valSet)
 	precommits := types.NewVoteSet(hvs.chainID, hvs.height, round, types.PrecommitType, hvs.valSet)
+	primaryChange := types.NewVoteSet(hvs.chainID, hvs.height, round, types.PrimaryChangeType, hvs.valSet)
+	changeCommit := types.NewVoteSet(hvs.chainID, hvs.height, round, types.ChangeCommitType, hvs.valSet)
 	hvs.roundVoteSets[round] = RoundVoteSet{
 		Prevotes:   prevotes,
 		Precommits: precommits,
+		PrimaryChange: primaryChange,
+		ChangeCommit: changeCommit,
 	}
 }
 
@@ -142,6 +148,18 @@ func (hvs *HeightVoteSet) Precommits(round int) *types.VoteSet {
 	return hvs.getVoteSet(round, types.PrecommitType)
 }
 
+func (hvs *HeightVoteSet) PrimaryChange(round int) *types.VoteSet {
+	hvs.mtx.Lock()
+	defer hvs.mtx.Unlock()
+	return hvs.getVoteSet(round, types.PrimaryChangeType)
+}
+
+func (hvs *HeightVoteSet) ChangeCommit(round int) *types.VoteSet {
+	hvs.mtx.Lock()
+	defer hvs.mtx.Unlock()
+	return hvs.getVoteSet(round, types.ChangeCommitType)
+}
+
 // Last round and blockID that has +2/3 prevotes for a particular block or nil.
 // Returns -1 if no such round exists.
 func (hvs *HeightVoteSet) POLInfo() (polRound int, polBlockID types.BlockID) {
@@ -167,6 +185,10 @@ func (hvs *HeightVoteSet) getVoteSet(round int, type_ types.SignedMsgType) *type
 		return rvs.Prevotes
 	case types.PrecommitType:
 		return rvs.Precommits
+	case types.PrimaryChangeType:
+		return rvs.PrimaryChange
+	case types.ChangeCommitType:
+		return rvs.ChangeCommit
 	default:
 		panic(fmt.Sprintf("Unexpected vote type %X", type_))
 	}
@@ -206,6 +228,10 @@ func (hvs *HeightVoteSet) StringIndented(indent string) string {
 		vsStrings = append(vsStrings, voteSetString)
 		voteSetString = hvs.roundVoteSets[round].Precommits.StringShort()
 		vsStrings = append(vsStrings, voteSetString)
+		voteSetString = hvs.roundVoteSets[round].PrimaryChange.StringShort()
+		vsStrings = append(vsStrings, voteSetString)
+		voteSetString = hvs.roundVoteSets[round].ChangeCommit.StringShort()
+		vsStrings = append(vsStrings, voteSetString)
 	}
 	// all other peer catchup rounds
 	for round, roundVoteSet := range hvs.roundVoteSets {
@@ -215,6 +241,10 @@ func (hvs *HeightVoteSet) StringIndented(indent string) string {
 		voteSetString := roundVoteSet.Prevotes.StringShort()
 		vsStrings = append(vsStrings, voteSetString)
 		voteSetString = roundVoteSet.Precommits.StringShort()
+		vsStrings = append(vsStrings, voteSetString)
+		voteSetString = roundVoteSet.PrimaryChange.StringShort()
+		vsStrings = append(vsStrings, voteSetString)
+		voteSetString = roundVoteSet.ChangeCommit.StringShort()
 		vsStrings = append(vsStrings, voteSetString)
 	}
 	return fmt.Sprintf(`HeightVoteSet{H:%v R:0~%v
@@ -244,6 +274,10 @@ func (hvs *HeightVoteSet) toAllRoundVotes() []roundVotes {
 			PrevotesBitArray:   hvs.roundVoteSets[round].Prevotes.BitArrayString(),
 			Precommits:         hvs.roundVoteSets[round].Precommits.VoteStrings(),
 			PrecommitsBitArray: hvs.roundVoteSets[round].Precommits.BitArrayString(),
+			PrimaryChange:         hvs.roundVoteSets[round].PrimaryChange.VoteStrings(),
+			PrimaryChangeBitArray: hvs.roundVoteSets[round].PrimaryChange.BitArrayString(),
+			ChangeCommit:         hvs.roundVoteSets[round].ChangeCommit.VoteStrings(),
+			ChangeCommitBitArray: hvs.roundVoteSets[round].ChangeCommit.BitArrayString(),
 		}
 	}
 	// TODO: all other peer catchup rounds
@@ -256,4 +290,8 @@ type roundVotes struct {
 	PrevotesBitArray   string   `json:"prevotes_bit_array"`
 	Precommits         []string `json:"precommits"`
 	PrecommitsBitArray string   `json:"precommits_bit_array"`
+	PrimaryChange	   []string `json:"primarychange"`
+	PrimaryChangeBitArray []string `json:"primarychange_bit_array"`
+	ChangeCommit       []string `json:"changecommit"`
+	ChangeCommitBitArray []string `json:"changecommit_bit_array"`
 }

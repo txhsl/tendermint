@@ -558,6 +558,7 @@ func (cs *ConsensusState) updateToState(state sm.State) {
 	cs.LastCommit = lastPrecommits
 	cs.LastValidators = state.LastValidators
 	cs.TriggeredTimeoutPrecommit = false
+	cs.PrimaryChanged = false
 
 	cs.state = state
 
@@ -704,6 +705,7 @@ func (cs *ConsensusState) handleMsg(mi msgInfo) {
 		// TODO: If rs.Height == vote.Height && rs.Round < vote.Round,
 		// the peer is sending us CatchupCommit precommits.
 		// We could make note of this and help filter in broadcastHasVoteMessage().
+
 	default:
 		cs.Logger.Error("Unknown msg type", "type", reflect.TypeOf(msg))
 		return
@@ -746,7 +748,13 @@ func (cs *ConsensusState) handleTimeout(ti timeoutInfo, rs cstypes.RoundState) {
 	case cstypes.RoundStepPrecommitWait:
 		cs.eventBus.PublishEventTimeoutWait(cs.RoundStateEvent())
 		cs.enterPrecommit(ti.Height, ti.Round)
-		cs.enterNewRound(ti.Height, ti.Round+1)
+		//cs.enterNewRound(ti.Height, ti.Round+1)
+	case cstypes.RoundStepTypePrimaryChangeWait:
+		cs.eventBus.PublishEventTimeoutWait(cs.RoundStateEvent())
+		cs.enterChangeCommitWait(ti.Height, ti.Round)
+	case cstypes.RoundStepTypeChangeCommitWait:
+		cs.eventBus.PublishEventTimeoutWait(cs.RoundStateEvent())
+		cs.enterNewRound(ti.Height, ti.Round+2)
 	default:
 		panic(fmt.Sprintf("Invalid timeout step: %v", ti.Step))
 	}
@@ -1393,6 +1401,54 @@ func (cs *ConsensusState) recordMetrics(height int64, block *types.Block) {
 
 }
 
+// Enter: the next primary doesn't have enough credit
+func (cs *ConsensusState) enterPrimaryChange(height int64, commitRound int) {
+	// if
+	// else
+}
+
+// Enter: +2/3 request for skip
+func (cs *ConsensusState) enterPrimaryChangeWait(height int64, round int) {
+	logger := cs.Logger.With("height", height, "round", round)
+
+	if cs.Height != height || round < cs.Round) {
+		logger.Debug(
+			fmt.Sprintf(
+				"enterPrimaryChangeWait(%v/%v): Invalid args. "+
+					"Current state is Height/Round: %v/%v/",
+				height, round, cs.Height, cs.Round)
+		return
+	}
+	if !cs.Votes.PrimaryChange(round).HasTwoThirdsAny() {
+		//panic(fmt.Sprintf("enterPrimaryChangeWait(%v/%v), but ChangeRequest does not have any +2/3 votes", height, round))
+	}
+	logger.Info(fmt.Sprintf("enterPrimaryChangeWait(%v/%v). Current: %v/%v/%v", height, round, cs.Height, cs.Round, cs.Step))
+
+	// Wait for some more requests; enterChangeCommit
+	cs.scheduleTimeout(cs.config.PrimaryChange(round), hesight, round, cstypes.RoundStepChangeCommitWait)
+}
+
+// Enter: +2/3 vote for skip
+func (cs *ConsensusState) enterChangeCommitWait(height int64, round int) {
+	logger := cs.Logger.With("height", height, "round", round)
+
+	if cs.Height != height || round < cs.Round) {
+		logger.Debug(
+			fmt.Sprintf(
+				"enterChangeCommitWait(%v/%v): Invalid args. "+
+					"Current state is Height/Round: %v/%v/",
+				height, round, cs.Height, cs.Round)
+		return
+	}
+	if !cs.Votes.ChangeCommit(round).HasTwoThirdsAny() {
+		panic(fmt.Sprintf("enterChangeCommitWait(%v/%v), but ChangeCommit does not have any +2/3 votes", height, round))
+	}
+	logger.Info(fmt.Sprintf("enterChangeCommitWait(%v/%v). Current: %v/%v/%v", height, round, cs.Height, cs.Round, cs.Step))
+
+	// Wait for some more requests; enterChangeCommit
+	cs.scheduleTimeout(cs.config.ChangeCommit(round), hesight, round, cstypes.RoundStepNewRound)
+}
+
 //-----------------------------------------------------------------------------
 
 func (cs *ConsensusState) defaultSetProposal(proposal *types.Proposal) error {
@@ -1667,6 +1723,24 @@ func (cs *ConsensusState) addVote(vote *types.Vote, peerID p2p.ID) (added bool, 
 		} else if cs.Round <= vote.Round && precommits.HasTwoThirdsAny() {
 			cs.enterNewRound(height, vote.Round)
 			cs.enterPrecommitWait(height, vote.Round)
+		}
+
+	case types.PrimaryChange:
+		primaryChange := cs.Votes.PrimaryChange(vote.round)
+		cs.Logger.Info("Added to primaryChange", "vote", vote, "primaryChange", primaryChange.StringShort())
+
+		blockID, ok := precommits.TwoThirdsMajority()
+		if ok {
+
+		}
+
+	case types.ChangeCommit:
+		changeCommit := cs.Votes.ChangeCommit(vote.round)
+		cs.Logger.Info("Added to changeCommit", "vote", vote, "changeCommit", changeCommit.StringShort())
+
+		blockID, ok := precommits.TwoThirdsMajority()
+		if ok {
+
 		}
 
 	default:

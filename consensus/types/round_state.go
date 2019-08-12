@@ -17,14 +17,17 @@ type RoundStepType uint8 // These must be numeric, ordered.
 
 // RoundStepType
 const (
-	RoundStepNewHeight     = RoundStepType(0x01) // Wait til CommitTime + timeoutCommit
-	RoundStepNewRound      = RoundStepType(0x02) // Setup new round and go to RoundStepPropose
-	RoundStepPropose       = RoundStepType(0x03) // Did propose, gossip proposal
-	RoundStepPrevote       = RoundStepType(0x04) // Did prevote, gossip prevotes
-	RoundStepPrevoteWait   = RoundStepType(0x05) // Did receive any +2/3 prevotes, start timeout
-	RoundStepPrecommit     = RoundStepType(0x06) // Did precommit, gossip precommits
-	RoundStepPrecommitWait = RoundStepType(0x07) // Did receive any +2/3 precommits, start timeout
-	RoundStepCommit        = RoundStepType(0x08) // Entered commit state machine
+	RoundStepNewHeight     	   = RoundStepType(0x01) // Wait til CommitTime + timeoutCommit
+	RoundStepNewRound          = RoundStepType(0x02) // Setup new round and go to RoundStepPropose
+	RoundStepPropose           = RoundStepType(0x03) // Did propose, gossip proposal
+	RoundStepPrevote           = RoundStepType(0x04) // Did prevote, gossip prevotes
+	RoundStepPrevoteWait       = RoundStepType(0x05) // Did receive any +2/3 prevotes, start timeout
+	RoundStepPrecommit         = RoundStepType(0x06) // Did precommit, gossip precommits
+	RoundStepPrecommitWait     = RoundStepType(0x07) // Did receive any +2/3 precommits, start timeout
+	RoundStepCommit            = RoundStepType(0x08) // Entered commit state machine
+	RoundStepPrimaryChange     = RoundStepType(0x09) // Optional state to change the primary for the next round
+	RoundStepPrimaryChangeWait = RoundStepType(0x10) // Did receive any +2/3 request, start timeout
+	RoundStepChangeCommitWait  = RoundStepType(0x11) // Did receive any +2/3 votes, start timeout
 	// NOTE: RoundStepNewHeight acts as RoundStepCommitWait.
 
 	// NOTE: Update IsValid method if you change this!
@@ -54,6 +57,12 @@ func (rs RoundStepType) String() string {
 		return "RoundStepPrecommitWait"
 	case RoundStepCommit:
 		return "RoundStepCommit"
+	case RoundStepPrimaryChange:
+		return "RoundStepPrimaryChange"
+	case RoundStepPrimaryChangeWait:
+		return "RoundStepPrimaryChangeWait"
+	case RoundStepChangeCommitWait:
+		return "RoundStepChangeCommitWait"
 	default:
 		return "RoundStepUnknown" // Cannot panic.
 	}
@@ -85,6 +94,7 @@ type RoundState struct {
 	LastCommit                *types.VoteSet      `json:"last_commit"`  // Last precommits at Height-1
 	LastValidators            *types.ValidatorSet `json:"last_validators"`
 	TriggeredTimeoutPrecommit bool                `json:"triggered_timeout_precommit"`
+	PrimaryChanged			  bool				  `json:"primary_changed"`
 }
 
 // Compressed version of the RoundState for use in RPC
@@ -176,7 +186,8 @@ func (rs *RoundState) StringIndented(indent string) string {
 %s  Votes:         %v
 %s  LastCommit:    %v
 %s  LastValidators:%v
-%s}`,
+%s  PrimaryChanged:%v
+%s  }`,
 		indent, rs.Height, rs.Round, rs.Step,
 		indent, rs.StartTime,
 		indent, rs.CommitTime,
@@ -190,6 +201,7 @@ func (rs *RoundState) StringIndented(indent string) string {
 		indent, rs.Votes.StringIndented(indent+"  "),
 		indent, rs.LastCommit.StringShort(),
 		indent, rs.LastValidators.StringIndented(indent+"  "),
+		indent, rs.PrimaryChanged..StringShort(),
 		indent)
 }
 
